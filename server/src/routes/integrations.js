@@ -174,4 +174,22 @@ router.post('/:id/mappings', async (req, res, next) => {
   }
 });
 
+// DELETE /api/integrations/:id - Desconectar integración
+router.delete('/:id', async (req, res, next) => {
+  try {
+    const integrationId = Number(req.params.id);
+    const integration = await prisma.integration.findUnique({ where: { id: integrationId } });
+    
+    if (!integration || integration.companyId !== req.companyId) {
+      return res.status(404).json({ error: 'Integración no encontrada.' });
+    }
+
+    await prisma.integration.delete({ where: { id: integrationId } });
+    
+    res.json({ message: 'Integración desconectada exitosamente' });
+  } catch (error) {
+    next(error);
+  }
+});
+
 module.exports = router;

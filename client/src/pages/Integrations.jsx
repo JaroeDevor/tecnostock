@@ -51,6 +51,19 @@ const Integrations = () => {
     }
   };
 
+  const handleDisconnect = async (id) => {
+    if (!window.confirm('¿Seguro que deseas desconectar esta plataforma? Se detendrá la sincronización de stock.')) return;
+    try {
+      setLoading(true);
+      await api.delete(`/integrations/${id}`);
+      fetchIntegrations();
+    } catch (error) {
+      alert(error.response?.data?.error || 'Error al desconectar');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleConnect = async (e) => {
     e.preventDefault();
     try {
@@ -172,7 +185,11 @@ const Integrations = () => {
                     >
                       <RefreshCw size={18} /> Forzar Sincronización
                     </button>
-                    <button className="btn" style={{ flex: 1, background: 'var(--danger-bg)', color: 'var(--danger)', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '0.5rem', padding: '0.8rem 1.5rem', borderRadius: '12px', border: 'none', cursor: 'pointer', fontWeight: 600 }}>
+                    <button 
+                      className="btn" 
+                      style={{ flex: 1, background: 'var(--danger-bg)', color: 'var(--danger)', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '0.5rem', padding: '0.8rem 1.5rem', borderRadius: '12px', border: 'none', cursor: 'pointer', fontWeight: 600 }}
+                      onClick={() => handleDisconnect(connected.id)}
+                    >
                       <Power size={18} /> Desconectar
                     </button>
                   </div>
