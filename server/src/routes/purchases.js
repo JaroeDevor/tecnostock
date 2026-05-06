@@ -137,7 +137,7 @@ router.post('/:id/receive', async (req, res, next) => {
 
       // 2. Verificar el estado final de la orden
       // Volvemos a consultar los ítems actualizados dentro de la tx
-      const updatedItems = await tx.purchaseOrderItem.findMany({ where: { purchaseOrderId: orderId } });
+      const updatedItems = await tx.purchaseOrderItem.findMany({ where: { orderId: orderId } });
       const isComplete = updatedItems.every(i => i.qtyReceived >= i.qtyOrdered);
       const newStatus = isComplete ? 'COMPLETE' : 'PARTIAL';
 
