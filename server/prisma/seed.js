@@ -7,7 +7,10 @@ async function main() {
   console.log('🌱 Seeding TecnoStock database...');
 
   // 1. Usuarios (Admin, Manager, Seller)
-  const passwordHash = await bcrypt.hash('123456', 10);
+  const seedPassword = process.env.SEED_ADMIN_PASSWORD || Math.random().toString(36).slice(-8);
+  console.log(`\n⚠️ ATENCIÓN: Contraseña para usuarios iniciales: ${seedPassword}`);
+  console.log('CAMBIAR INMEDIATAMENTE en producción.\n');
+  const passwordHash = await bcrypt.hash(seedPassword, 10);
   
   const admin = await prisma.user.upsert({
     where: { email: 'admin@tecnomovil.com' },

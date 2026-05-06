@@ -1,7 +1,10 @@
 const crypto = require('crypto');
 
 const ALGORITHM = 'aes-256-cbc';
-const ENCRYPTION_KEY = Buffer.from(process.env.ENCRYPTION_KEY || '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef', 'hex'); // Must be 256 bits (32 bytes)
+if (!process.env.ENCRYPTION_KEY) {
+  throw new Error("ENCRYPTION_KEY no configurada. Abortando el inicio por seguridad.");
+}
+const ENCRYPTION_KEY = Buffer.from(process.env.ENCRYPTION_KEY, 'hex'); // Must be 256 bits (32 bytes)
 const IV_LENGTH = 16; // For AES, this is always 16
 
 function encrypt(text) {
