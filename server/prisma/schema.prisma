@@ -1,5 +1,5 @@
 // TecnoStock — Schema de Base de Datos Completo
-// Cliente: TecnoMovil Distribuciones
+// Cliente: Multi-Tenant SaaS
 
 generator client {
   provider = "prisma-client-js"
@@ -11,10 +11,38 @@ datasource db {
 }
 
 // =============================================
+// COMPAÑÍAS (MULTI-TENANCY)
+// =============================================
+model Company {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  slug      String   @unique
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  users             User[]
+  categories        Category[]
+  products          Product[]
+  suppliers         Supplier[]
+  customers         Customer[]
+  locations         Location[]
+  sales             Sale[]
+  purchaseOrders    PurchaseOrder[]
+  stockByLocations  StockByLocation[]
+  stockAdjustments  StockAdjustment[]
+  stockTransfers    StockTransfer[]
+  exchangeRates     ExchangeRate[]
+  integrations      Integration[]
+  auditLogs         AuditLog[]
+  stockReservations StockReservation[]
+}
+
+// =============================================
 // USUARIOS Y AUTENTICACIÓN
 // =============================================
 model User {
   id        Int      @id @default(autoincrement())
+  companyId Int
   name      String
   email     String   @unique
   password  String
@@ -23,6 +51,7 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  company          Company            @relation(fields: [companyId], references: [id])
   sales            Sale[]
   stockAdjustments StockAdjustment[]
   auditLogs        AuditLog[]
@@ -33,12 +62,16 @@ model User {
 // =============================================
 model Category {
   id          Int           @id @default(autoincrement())
-  name        String        @unique
+  companyId   Int
+  name        String        
   description String?
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
 
+  company       Company       @relation(fields: [companyId], references: [id])
   subCategories SubCategory[]
+
+  @@unique([name, companyId])
 }
 
 model SubCategory {
@@ -59,8 +92,9 @@ model SubCategory {
 // =============================================
 model Product {
   id            Int      @id @default(autoincrement())
+  companyId     Int
   name          String
-  sku           String   @unique
+  sku           String   
   ean           String?  // Código de barras EAN/UPC
   description   String?
   costUsd       Float    @default(0)
@@ -73,7 +107,8 @@ model Product {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  subCategory       SubCategory?      @relation(fields: [subCategoryId], references: [id])
+  company           Company             @relation(fields: [companyId], references: [id])
+  subCategory       SubCategory?        @relation(fields: [subCategoryId], references: [id])
   productLocation   ProductLocation?
   productSuppliers  ProductSupplier[]
   stockByLocation   StockByLocation[]
@@ -83,6 +118,8 @@ model Product {
   stockAdjustments  StockAdjustment[]
   stockTransfers    StockTransfer[]
   externalMappings  ProductIntegration[]
+
+  @@unique([sku, companyId])
 }
 
 // Ubicación física del producto en el almacén
@@ -101,6 +138,7 @@ model ProductLocation {
 // =============================================
 model Supplier {
   id           Int      @id @default(autoincrement())
+  companyId    Int
   name         String
   taxId        String?  // RUT / Tax ID
   whatsapp     String?
@@ -111,6 +149,7 @@ model Supplier {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
+  company          Company           @relation(fields: [companyId], references: [id])
   productSuppliers ProductSupplier[]
   purchaseOrders   PurchaseOrder[]
 }
@@ -134,6 +173,7 @@ model ProductSupplier {
 // =============================================
 model Customer {
   id        Int      @id @default(autoincrement())
+  companyId Int
   name      String
   phone     String?
   email     String?
@@ -142,6 +182,7 @@ model Customer {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  company           Company            @relation(fields: [companyId], references: [id])
   sales             Sale[]
   stockReservations StockReservation[]
 }
@@ -151,13 +192,15 @@ model Customer {
 // =============================================
 model Location {
   id        Int      @id @default(autoincrement())
-  name      String   @unique
+  companyId Int
+  name      String   
   type      String   @default("STORE") // WAREHOUSE, STORE
   address   String?
   active    Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  company           Company            @relation(fields: [companyId], references: [id])
   stockByLocation   StockByLocation[]
   sales             Sale[]
   stockReservations StockReservation[]
@@ -165,6 +208,8 @@ model Location {
   purchaseOrders    PurchaseOrder[]
   transfersFrom     StockTransfer[] @relation("TransfersFrom")
   transfersTo       StockTransfer[] @relation("TransfersTo")
+
+  @@unique([name, companyId])
 }
 
 // =============================================
@@ -172,11 +217,13 @@ model Location {
 // =============================================
 model StockByLocation {
   id         Int   @id @default(autoincrement())
+  companyId  Int
   productId  Int
   locationId Int
   quantity   Int   @default(0)
   avgCostUsd Float @default(0) // Costo Promedio Ponderado
 
+  company  Company  @relation(fields: [companyId], references: [id])
   product  Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
   location Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
 
@@ -188,6 +235,7 @@ model StockByLocation {
 // =============================================
 model PurchaseOrder {
   id         Int      @id @default(autoincrement())
+  companyId  Int
   supplierId Int
   status     String   @default("DRAFT") // DRAFT, SENT, PARTIAL, COMPLETE, CANCELLED
   totalUsd   Float    @default(0)
@@ -200,6 +248,7 @@ model PurchaseOrder {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
+  company  Company             @relation(fields: [companyId], references: [id])
   supplier Supplier            @relation(fields: [supplierId], references: [id])
   items    PurchaseOrderItem[]
 }
@@ -221,6 +270,7 @@ model PurchaseOrderItem {
 // =============================================
 model Sale {
   id           Int      @id @default(autoincrement())
+  companyId    Int
   customerId   Int?
   locationId   Int
   userId       Int
@@ -237,6 +287,7 @@ model Sale {
   notes        String?
   createdAt    DateTime @default(now())
 
+  company     Company      @relation(fields: [companyId], references: [id])
   customer    Customer?    @relation(fields: [customerId], references: [id])
   location    Location     @relation(fields: [locationId], references: [id])
   user        User         @relation(fields: [userId], references: [id])
@@ -261,6 +312,7 @@ model SaleItem {
 // =============================================
 model StockReservation {
   id         Int      @id @default(autoincrement())
+  companyId  Int
   productId  Int
   locationId Int
   customerId Int
@@ -271,6 +323,7 @@ model StockReservation {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
+  company  Company  @relation(fields: [companyId], references: [id])
   product  Product  @relation(fields: [productId], references: [id])
   location Location @relation(fields: [locationId], references: [id])
   customer Customer @relation(fields: [customerId], references: [id])
@@ -281,6 +334,7 @@ model StockReservation {
 // =============================================
 model StockAdjustment {
   id         Int      @id @default(autoincrement())
+  companyId  Int
   productId  Int
   locationId Int
   userId     Int
@@ -289,6 +343,7 @@ model StockAdjustment {
   notes      String?
   createdAt  DateTime @default(now())
 
+  company  Company  @relation(fields: [companyId], references: [id])
   product  Product  @relation(fields: [productId], references: [id])
   location Location @relation(fields: [locationId], references: [id])
   user     User     @relation(fields: [userId], references: [id])
@@ -299,6 +354,7 @@ model StockAdjustment {
 // =============================================
 model StockTransfer {
   id             Int      @id @default(autoincrement())
+  companyId      Int
   productId      Int
   fromLocationId Int
   toLocationId   Int
@@ -307,6 +363,7 @@ model StockTransfer {
   createdBy      Int
   createdAt      DateTime @default(now())
 
+  company      Company  @relation(fields: [companyId], references: [id])
   product      Product  @relation(fields: [productId], references: [id])
   fromLocation Location @relation("TransfersFrom", fields: [fromLocationId], references: [id])
   toLocation   Location @relation("TransfersTo", fields: [toLocationId], references: [id])
@@ -316,12 +373,15 @@ model StockTransfer {
 // TIPO DE CAMBIO
 // =============================================
 model ExchangeRate {
-  id       Int      @id @default(autoincrement())
-  currency String   @default("ARS")
-  rate     Float
-  date     DateTime @default(now())
+  id        Int      @id @default(autoincrement())
+  companyId Int
+  currency  String   @default("ARS")
+  rate      Float
+  date      DateTime @default(now())
 
-  @@unique([currency, date])
+  company Company @relation(fields: [companyId], references: [id])
+
+  @@unique([currency, date, companyId])
 }
 
 // =============================================
@@ -329,6 +389,7 @@ model ExchangeRate {
 // =============================================
 model AuditLog {
   id        Int      @id @default(autoincrement())
+  companyId Int
   userId    Int?
   action    String   // CREATE, UPDATE, DELETE, LOGIN, SALE, ADJUSTMENT, etc.
   entity    String   // Product, Sale, StockAdjustment, etc.
@@ -336,7 +397,8 @@ model AuditLog {
   details   String?  // JSON con detalles
   createdAt DateTime @default(now())
 
-  user User? @relation(fields: [userId], references: [id])
+  company Company @relation(fields: [companyId], references: [id])
+  user    User?   @relation(fields: [userId], references: [id])
 }
 
 // =============================================
@@ -344,6 +406,7 @@ model AuditLog {
 // =============================================
 model Integration {
   id          Int      @id @default(autoincrement())
+  companyId   Int
   platform    String   // MERCADO_LIBRE, TIENDA_NUBE
   storeName   String   // Ej: "Tienda Oficial ML", "MiNube"
   accessToken String?
@@ -352,6 +415,7 @@ model Integration {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  company         Company              @relation(fields: [companyId], references: [id])
   productMappings ProductIntegration[]
   sales           Sale[]
 }
