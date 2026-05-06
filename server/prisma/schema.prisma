@@ -1,0 +1,371 @@
+// TecnoStock — Schema de Base de Datos Completo
+// Cliente: TecnoMovil Distribuciones
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// =============================================
+// USUARIOS Y AUTENTICACIÓN
+// =============================================
+model User {
+  id        Int      @id @default(autoincrement())
+  name      String
+  email     String   @unique
+  password  String
+  role      String   @default("SELLER") // ADMIN, MANAGER, SELLER
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  sales            Sale[]
+  stockAdjustments StockAdjustment[]
+  auditLogs        AuditLog[]
+}
+
+// =============================================
+// CATEGORÍAS Y SUBCATEGORÍAS
+// =============================================
+model Category {
+  id          Int           @id @default(autoincrement())
+  name        String        @unique
+  description String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  subCategories SubCategory[]
+}
+
+model SubCategory {
+  id         Int      @id @default(autoincrement())
+  name       String
+  categoryId Int
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  category Category  @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  products Product[]
+
+  @@unique([name, categoryId])
+}
+
+// =============================================
+// PRODUCTOS
+// =============================================
+model Product {
+  id            Int      @id @default(autoincrement())
+  name          String
+  sku           String   @unique
+  ean           String?  // Código de barras EAN/UPC
+  description   String?
+  costUsd       Float    @default(0)
+  salePrice     Float    @default(0)
+  minStock      Int      @default(0)
+  maxStock      Int      @default(0)
+  imageUrl      String?
+  active        Boolean  @default(true)
+  subCategoryId Int?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  subCategory       SubCategory?      @relation(fields: [subCategoryId], references: [id])
+  productLocation   ProductLocation?
+  productSuppliers  ProductSupplier[]
+  stockByLocation   StockByLocation[]
+  purchaseOrderItems PurchaseOrderItem[]
+  saleItems         SaleItem[]
+  stockReservations StockReservation[]
+  stockAdjustments  StockAdjustment[]
+  stockTransfers    StockTransfer[]
+  externalMappings  ProductIntegration[]
+}
+
+// Ubicación física del producto en el almacén
+model ProductLocation {
+  id        Int    @id @default(autoincrement())
+  productId Int    @unique
+  aisle     String // Pasillo
+  shelf     String // Estante
+  drawer    String? // Gaveta
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+}
+
+// =============================================
+// PROVEEDORES
+// =============================================
+model Supplier {
+  id           Int      @id @default(autoincrement())
+  name         String
+  taxId        String?  // RUT / Tax ID
+  whatsapp     String?
+  email        String?
+  address      String?
+  leadTimeDays Int      @default(7) // Tiempo de entrega estimado
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  productSuppliers ProductSupplier[]
+  purchaseOrders   PurchaseOrder[]
+}
+
+// Relación Producto-Proveedor (N:M)
+model ProductSupplier {
+  id          Int    @id @default(autoincrement())
+  productId   Int
+  supplierId  Int
+  supplierSku String? // SKU del proveedor
+  lastCostUsd Float   @default(0)
+
+  product  Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  supplier Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, supplierId])
+}
+
+// =============================================
+// CLIENTES
+// =============================================
+model Customer {
+  id        Int      @id @default(autoincrement())
+  name      String
+  phone     String?
+  email     String?
+  address   String?
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  sales             Sale[]
+  stockReservations StockReservation[]
+}
+
+// =============================================
+// UBICACIONES (Almacén y Tiendas)
+// =============================================
+model Location {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  type      String   @default("STORE") // WAREHOUSE, STORE
+  address   String?
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  stockByLocation   StockByLocation[]
+  sales             Sale[]
+  stockReservations StockReservation[]
+  stockAdjustments  StockAdjustment[]
+  purchaseOrders    PurchaseOrder[]
+  transfersFrom     StockTransfer[] @relation("TransfersFrom")
+  transfersTo       StockTransfer[] @relation("TransfersTo")
+}
+
+// =============================================
+// STOCK POR UBICACIÓN
+// =============================================
+model StockByLocation {
+  id         Int   @id @default(autoincrement())
+  productId  Int
+  locationId Int
+  quantity   Int   @default(0)
+  avgCostUsd Float @default(0) // Costo Promedio Ponderado
+
+  product  Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  location Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, locationId])
+}
+
+// =============================================
+// ÓRDENES DE COMPRA
+// =============================================
+model PurchaseOrder {
+  id         Int      @id @default(autoincrement())
+  supplierId Int
+  status     String   @default("DRAFT") // DRAFT, SENT, PARTIAL, COMPLETE, CANCELLED
+  totalUsd   Float    @default(0)
+  notes      String?
+  createdBy  Int?
+  receivedBy String?   // Empleado que recibió la mercadería
+  receivedAt DateTime? // Fecha real de llegada
+  locationId Int?      // Depósito donde entró la mercadería
+  location   Location? @relation(fields: [locationId], references: [id])
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  supplier Supplier            @relation(fields: [supplierId], references: [id])
+  items    PurchaseOrderItem[]
+}
+
+model PurchaseOrderItem {
+  id          Int   @id @default(autoincrement())
+  orderId     Int
+  productId   Int
+  qtyOrdered  Int
+  qtyReceived Int   @default(0)
+  unitCostUsd Float @default(0)
+
+  order   PurchaseOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product Product       @relation(fields: [productId], references: [id])
+}
+
+// =============================================
+// VENTAS
+// =============================================
+model Sale {
+  id           Int      @id @default(autoincrement())
+  customerId   Int?
+  locationId   Int
+  userId       Int
+  subtotal     Float    @default(0)
+  tax          Float    @default(0)
+  total        Float    @default(0)
+  exchangeRate Float    @default(1)
+  currency     String   @default("USD")
+  paymentMethod String  @default("CASH") // CASH, CARD, TRANSFER
+  status       String   @default("COMPLETED") // COMPLETED, CANCELLED
+  source       String   @default("LOCAL") // LOCAL, MERCADO_LIBRE, TIENDA_NUBE
+  integrationId Int?
+  externalOrderId String? // ID de la orden en la plataforma externa
+  notes        String?
+  createdAt    DateTime @default(now())
+
+  customer    Customer?    @relation(fields: [customerId], references: [id])
+  location    Location     @relation(fields: [locationId], references: [id])
+  user        User         @relation(fields: [userId], references: [id])
+  integration Integration? @relation(fields: [integrationId], references: [id])
+  items       SaleItem[]
+}
+
+model SaleItem {
+  id         Int   @id @default(autoincrement())
+  saleId     Int
+  productId  Int
+  quantity   Int
+  unitPrice  Float
+  costAtSale Float @default(0) // CPP al momento de la venta
+
+  sale    Sale    @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id])
+}
+
+// =============================================
+// APARTADOS / RESERVACIONES
+// =============================================
+model StockReservation {
+  id         Int      @id @default(autoincrement())
+  productId  Int
+  locationId Int
+  customerId Int
+  quantity   Int
+  status     String   @default("ACTIVE") // ACTIVE, CONVERTED, EXPIRED, CANCELLED
+  expiresAt  DateTime
+  notes      String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  product  Product  @relation(fields: [productId], references: [id])
+  location Location @relation(fields: [locationId], references: [id])
+  customer Customer @relation(fields: [customerId], references: [id])
+}
+
+// =============================================
+// AJUSTES DE INVENTARIO
+// =============================================
+model StockAdjustment {
+  id         Int      @id @default(autoincrement())
+  productId  Int
+  locationId Int
+  userId     Int
+  qtyChange  Int      // Puede ser + o -
+  reason     String   // SHRINKAGE, THEFT, DAMAGE, PHYSICAL_COUNT, OTHER
+  notes      String?
+  createdAt  DateTime @default(now())
+
+  product  Product  @relation(fields: [productId], references: [id])
+  location Location @relation(fields: [locationId], references: [id])
+  user     User     @relation(fields: [userId], references: [id])
+}
+
+// =============================================
+// TRANSFERENCIAS ENTRE LOCALES
+// =============================================
+model StockTransfer {
+  id             Int      @id @default(autoincrement())
+  productId      Int
+  fromLocationId Int
+  toLocationId   Int
+  quantity       Int
+  notes          String?
+  createdBy      Int
+  createdAt      DateTime @default(now())
+
+  product      Product  @relation(fields: [productId], references: [id])
+  fromLocation Location @relation("TransfersFrom", fields: [fromLocationId], references: [id])
+  toLocation   Location @relation("TransfersTo", fields: [toLocationId], references: [id])
+}
+
+// =============================================
+// TIPO DE CAMBIO
+// =============================================
+model ExchangeRate {
+  id       Int      @id @default(autoincrement())
+  currency String   @default("ARS")
+  rate     Float
+  date     DateTime @default(now())
+
+  @@unique([currency, date])
+}
+
+// =============================================
+// LOG DE AUDITORÍA
+// =============================================
+model AuditLog {
+  id        Int      @id @default(autoincrement())
+  userId    Int?
+  action    String   // CREATE, UPDATE, DELETE, LOGIN, SALE, ADJUSTMENT, etc.
+  entity    String   // Product, Sale, StockAdjustment, etc.
+  entityId  Int?
+  details   String?  // JSON con detalles
+  createdAt DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id])
+}
+
+// =============================================
+// INTEGRACIONES EXTERNAS (Mercado Libre, Tienda Nube)
+// =============================================
+model Integration {
+  id          Int      @id @default(autoincrement())
+  platform    String   // MERCADO_LIBRE, TIENDA_NUBE
+  storeName   String   // Ej: "Tienda Oficial ML", "MiNube"
+  accessToken String?
+  active      Boolean  @default(true)
+  syncStock   Boolean  @default(true) // Si está en true, los movimientos impactan acá
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  productMappings ProductIntegration[]
+  sales           Sale[]
+}
+
+model ProductIntegration {
+  id            Int      @id @default(autoincrement())
+  productId     Int
+  integrationId Int
+  externalId    String   // ID de la publicación en ML (ej: MLA1234) o TN
+  syncStatus    String   @default("SYNCED") // SYNCED, PENDING, ERROR
+  lastSyncAt    DateTime @default(now())
+
+  product     Product     @relation(fields: [productId], references: [id], onDelete: Cascade)
+  integration Integration @relation(fields: [integrationId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, integrationId])
+}
