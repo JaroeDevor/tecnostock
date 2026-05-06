@@ -1,11 +1,13 @@
 const express = require('express');
 const prisma = require('../lib/prisma');
 const auth = require('../middleware/auth');
+const tenant = require('../middleware/tenant');
 const authorize = require('../middleware/roles');
 
 const router = express.Router();
 
 router.use(auth);
+router.use(tenant);
 
 // POST /api/transfers - Transferir stock entre locales
 router.post('/', authorize('ADMIN', 'MANAGER'), async (req, res, next) => {
@@ -54,6 +56,7 @@ router.post('/', authorize('ADMIN', 'MANAGER'), async (req, res, next) => {
       } else {
         await tx.stockByLocation.create({
           data: {
+            companyId: req.companyId,
             productId: Number(productId),
             locationId: Number(toLocationId),
             quantity,
@@ -65,6 +68,7 @@ router.post('/', authorize('ADMIN', 'MANAGER'), async (req, res, next) => {
       // Registrar la transferencia
       await tx.stockTransfer.create({
         data: {
+          companyId: req.companyId,
           productId: Number(productId),
           fromLocationId: Number(fromLocationId),
           toLocationId: Number(toLocationId),
@@ -77,6 +81,7 @@ router.post('/', authorize('ADMIN', 'MANAGER'), async (req, res, next) => {
       // Auditoría
       await tx.auditLog.create({
         data: {
+          companyId: req.companyId,
           userId: req.user.id,
           action: 'STOCK_TRANSFER',
           entity: 'StockTransfer',
@@ -99,6 +104,7 @@ router.post('/', authorize('ADMIN', 'MANAGER'), async (req, res, next) => {
 router.get('/', async (req, res, next) => {
   try {
     const transfers = await prisma.stockTransfer.findMany({
+      where: { companyId: req.companyId },
       orderBy: { createdAt: 'desc' },
       take: 50,
       include: {

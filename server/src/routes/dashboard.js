@@ -1,10 +1,12 @@
 const express = require('express');
 const prisma = require('../lib/prisma');
 const auth = require('../middleware/auth');
+const tenant = require('../middleware/tenant');
 
 const router = express.Router();
 
 router.use(auth);
+router.use(tenant);
 
 // GET /api/dashboard - Resumen de métricas para el Dashboard
 router.get('/', async (req, res, next) => {
@@ -16,7 +18,7 @@ router.get('/', async (req, res, next) => {
 
     // 1. Total Productos y Alertas de Stock Bajo
     const products = await prisma.product.findMany({
-      where: { active: true },
+      where: { active: true, companyId: req.companyId },
       include: { stockByLocation: true }
     });
 
@@ -42,6 +44,7 @@ router.get('/', async (req, res, next) => {
     // 2. Ventas del Mes y Hoy
     const salesThisMonth = await prisma.sale.findMany({
       where: {
+        companyId: req.companyId,
         createdAt: { gte: startOfMonth },
         status: 'COMPLETED'
       }
@@ -55,6 +58,7 @@ router.get('/', async (req, res, next) => {
     // 3. Últimas 5 ventas (para la tabla de Actividad Reciente)
     const recentSales = await prisma.sale.findMany({
       take: 5,
+      where: { companyId: req.companyId },
       orderBy: { createdAt: 'desc' },
       include: {
         location: true,
@@ -64,12 +68,12 @@ router.get('/', async (req, res, next) => {
 
     // 4. Inversión vs Recupero (Análisis Financiero Histórico)
     const allCompletedPurchases = await prisma.purchaseOrder.findMany({
-      where: { status: 'COMPLETE' },
+      where: { status: 'COMPLETE', companyId: req.companyId },
       select: { totalUsd: true }
     });
 
     const allCompletedSales = await prisma.sale.findMany({
-      where: { status: 'COMPLETED' },
+      where: { status: 'COMPLETED', companyId: req.companyId },
       select: { total: true }
     });
 
@@ -78,7 +82,7 @@ router.get('/', async (req, res, next) => {
 
     // 5. Últimas Compras en Tránsito
     const pendingPurchases = await prisma.purchaseOrder.count({
-      where: { status: 'DRAFT' }
+      where: { status: 'DRAFT', companyId: req.companyId }
     });
 
     res.json({

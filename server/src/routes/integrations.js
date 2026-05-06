@@ -1,6 +1,7 @@
 const express = require('express');
 const prisma = require('../lib/prisma');
 const auth = require('../middleware/auth');
+const tenant = require('../middleware/tenant');
 const authorize = require('../middleware/roles');
 const { encrypt, decrypt } = require('../utils/crypto');
 
@@ -15,7 +16,7 @@ router.get('/ml/auth', (req, res) => {
 });
 
 // Endpoint que recibe el code de ML y lo canjea por un token real
-router.post('/ml/callback', auth, authorize('ADMIN'), async (req, res, next) => {
+router.post('/ml/callback', auth, tenant, authorize('ADMIN'), async (req, res, next) => {
   try {
     const { code, storeName } = req.body;
     if (!code) return res.status(400).json({ error: 'Falta el código de autorización' });
@@ -29,7 +30,8 @@ router.post('/ml/callback', auth, authorize('ADMIN'), async (req, res, next) => 
         platform: 'MERCADO_LIBRE', 
         storeName: storeName || 'Mercado Libre Oficial', 
         accessToken: encrypt(mockAccessToken), 
-        syncStock: true 
+        syncStock: true,
+        companyId: req.companyId
       }
     });
 
@@ -41,12 +43,14 @@ router.post('/ml/callback', auth, authorize('ADMIN'), async (req, res, next) => 
 
 // Solo Administradores pueden gestionar integraciones
 router.use(auth);
+router.use(tenant);
 router.use(authorize('ADMIN'));
 
 // GET /api/integrations - Ver integraciones activas
 router.get('/', async (req, res, next) => {
   try {
     const integrations = await prisma.integration.findMany({
+      where: { companyId: req.companyId },
       include: {
         _count: {
           select: { productMappings: true, sales: true }
@@ -82,7 +86,8 @@ router.post('/', async (req, res, next) => {
         platform, 
         storeName, 
         accessToken: encrypt(accessToken), 
-        syncStock: Boolean(syncStock) 
+        syncStock: Boolean(syncStock),
+        companyId: req.companyId
       }
     });
 
@@ -101,7 +106,7 @@ router.post('/:id/sync', async (req, res, next) => {
       include: { productMappings: true }
     });
 
-    if (!integration) return res.status(404).json({ error: 'Integración no encontrada.' });
+    if (!integration || integration.companyId !== req.companyId) return res.status(404).json({ error: 'Integración no encontrada.' });
 
     // Desencriptar el token para usarlo
     const realToken = decrypt(integration.accessToken);
@@ -121,6 +126,9 @@ router.post('/:id/sync', async (req, res, next) => {
 router.get('/:id/mappings', async (req, res, next) => {
   try {
     const integrationId = Number(req.params.id);
+    const integration = await prisma.integration.findUnique({ where: { id: integrationId } });
+    if (!integration || integration.companyId !== req.companyId) return res.status(404).json({ error: 'Integración no encontrada.' });
+
     const mappings = await prisma.productIntegration.findMany({
       where: { integrationId },
       include: { product: { select: { name: true, sku: true } } }
@@ -135,6 +143,9 @@ router.get('/:id/mappings', async (req, res, next) => {
 router.post('/:id/mappings', async (req, res, next) => {
   try {
     const integrationId = Number(req.params.id);
+    const integration = await prisma.integration.findUnique({ where: { id: integrationId } });
+    if (!integration || integration.companyId !== req.companyId) return res.status(404).json({ error: 'Integración no encontrada.' });
+
     const { mappings } = req.body; // array de { productId, externalId }
 
     if (!Array.isArray(mappings)) return res.status(400).json({ error: 'Faltan mappings' });

@@ -1,10 +1,12 @@
 const express = require('express');
 const prisma = require('../lib/prisma');
 const auth = require('../middleware/auth');
+const tenant = require('../middleware/tenant');
 
 const router = express.Router();
 
 router.use(auth);
+router.use(tenant);
 
 // POST /api/sales - Registrar una nueva venta (Local o Externa)
 router.post('/', async (req, res, next) => {
@@ -48,6 +50,7 @@ router.post('/', async (req, res, next) => {
       // 2. Crear la venta
       const sale = await tx.sale.create({
         data: {
+          companyId: req.companyId,
           customerId: customerId ? Number(customerId) : null,
           locationId: Number(locationId),
           userId: req.user.id,
@@ -78,6 +81,7 @@ router.post('/', async (req, res, next) => {
       // 3. Registrar auditoría
       await tx.auditLog.create({
         data: {
+          companyId: req.companyId,
           userId: req.user.id,
           action: 'SALE',
           entity: 'Sale',
@@ -103,7 +107,7 @@ router.get('/', async (req, res, next) => {
   try {
     const { page = 1, limit = 50, locationId, from, to } = req.query;
 
-    const where = {};
+    const where = { companyId: req.companyId };
     if (locationId) where.locationId = Number(locationId);
     
     if (from || to) {

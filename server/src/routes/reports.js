@@ -1,17 +1,19 @@
 const express = require('express');
 const prisma = require('../lib/prisma');
 const auth = require('../middleware/auth');
+const tenant = require('../middleware/tenant');
 
 const router = express.Router();
 
 router.use(auth);
+router.use(tenant);
 
 // GET /api/reports/sales-by-product - Ventas agrupadas por producto y locación
 router.get('/sales-by-product', async (req, res, next) => {
   try {
     const { productId, from, to } = req.query;
 
-    const where = { sale: { status: 'COMPLETED' } };
+    const where = { sale: { status: 'COMPLETED', companyId: req.companyId } };
 
     if (productId) {
       where.productId = Number(productId);

@@ -1,18 +1,21 @@
 const express = require('express');
 const prisma = require('../lib/prisma');
 const auth = require('../middleware/auth');
+const tenant = require('../middleware/tenant');
 const authorize = require('../middleware/roles');
 
 const router = express.Router();
 
 // Las compras solo las manejan Admins y Managers
 router.use(auth);
+router.use(tenant);
 router.use(authorize('ADMIN', 'MANAGER'));
 
 // GET /api/purchases - Ver órdenes de compra
 router.get('/', async (req, res, next) => {
   try {
     const orders = await prisma.purchaseOrder.findMany({
+      where: { companyId: req.companyId },
       include: { 
         supplier: true, 
         items: { include: { product: true } },
@@ -37,6 +40,7 @@ router.post('/', async (req, res, next) => {
 
     const order = await prisma.purchaseOrder.create({
       data: {
+        companyId: req.companyId,
         supplierId: Number(supplierId),
         status: 'DRAFT',
         totalUsd,
@@ -74,7 +78,7 @@ router.post('/:id/receive', async (req, res, next) => {
       include: { items: true }
     });
 
-    if (!order) return res.status(404).json({ error: 'Orden no encontrada' });
+    if (!order || order.companyId !== req.companyId) return res.status(404).json({ error: 'Orden no encontrada' });
     if (order.status === 'COMPLETE') return res.status(400).json({ error: 'La orden ya fue recibida completamente' });
 
     // Transacción: Procesamos la recepción parcial o total
@@ -120,6 +124,7 @@ router.post('/:id/receive', async (req, res, next) => {
         } else {
           await tx.stockByLocation.create({
             data: {
+              companyId: req.companyId,
               productId: orderItem.productId,
               locationId: Number(locationId),
               quantity: receivedItem.qtyToReceive,
@@ -156,6 +161,7 @@ router.post('/:id/receive', async (req, res, next) => {
       // 4. Auditoría
       await tx.auditLog.create({
         data: {
+          companyId: req.companyId,
           userId: req.user.id,
           action: 'PURCHASE_RECEIVE',
           entity: 'PurchaseOrder',
@@ -181,7 +187,7 @@ router.put('/:id', async (req, res, next) => {
     const { supplierId, items, notes } = req.body;
 
     const existingOrder = await prisma.purchaseOrder.findUnique({ where: { id: orderId } });
-    if (!existingOrder) return res.status(404).json({ error: 'Orden no encontrada' });
+    if (!existingOrder || existingOrder.companyId !== req.companyId) return res.status(404).json({ error: 'Orden no encontrada' });
     if (existingOrder.status !== 'DRAFT') return res.status(400).json({ error: 'Solo se pueden editar órdenes en estado DRAFT' });
 
     let totalUsd = 0;
@@ -217,7 +223,7 @@ router.delete('/:id', async (req, res, next) => {
     const orderId = Number(req.params.id);
     
     const existingOrder = await prisma.purchaseOrder.findUnique({ where: { id: orderId } });
-    if (!existingOrder) return res.status(404).json({ error: 'Orden no encontrada' });
+    if (!existingOrder || existingOrder.companyId !== req.companyId) return res.status(404).json({ error: 'Orden no encontrada' });
     if (existingOrder.status !== 'DRAFT') return res.status(400).json({ error: 'No se puede eliminar una orden que ya fue recibida' });
 
     await prisma.purchaseOrder.delete({ where: { id: orderId } });

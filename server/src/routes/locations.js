@@ -1,16 +1,18 @@
 const express = require('express');
 const prisma = require('../lib/prisma');
 const auth = require('../middleware/auth');
+const tenant = require('../middleware/tenant');
 
 const router = express.Router();
 
 router.use(auth);
+router.use(tenant);
 
 // GET /api/locations - Obtener todos los depósitos/tiendas
 router.get('/', async (req, res, next) => {
   try {
     const locations = await prisma.location.findMany({
-      where: { active: true },
+      where: { active: true, companyId: req.companyId },
       orderBy: { id: 'asc' }
     });
     res.json(locations);
@@ -30,7 +32,8 @@ router.post('/', async (req, res, next) => {
       data: {
         name,
         type: type || 'STORE',
-        address
+        address,
+        companyId: req.companyId
       }
     });
 

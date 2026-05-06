@@ -1,12 +1,14 @@
 const express = require('express');
 const prisma = require('../lib/prisma');
 const auth = require('../middleware/auth');
+const tenant = require('../middleware/tenant');
 const authorize = require('../middleware/roles');
 
 const router = express.Router();
 
 // Todas las rutas de productos requieren autenticación
 router.use(auth);
+router.use(tenant);
 
 // GET /api/products - Obtener todos los productos (con filtros y paginación)
 router.get('/', async (req, res, next) => {
@@ -16,6 +18,7 @@ router.get('/', async (req, res, next) => {
     // Filtros de búsqueda
     const where = {
       active: true,
+      companyId: req.companyId,
       ...(search && {
         OR: [
           { name: { contains: search } },
@@ -80,7 +83,8 @@ router.post('/', authorize('ADMIN', 'MANAGER'), async (req, res, next) => {
           productId: product.id,
           locationId: Number(locationId),
           quantity: Number(currentStock),
-          avgCostUsd: Number(costUsd)
+          avgCostUsd: Number(costUsd),
+          companyId: req.companyId
         }
       });
     }
@@ -88,6 +92,7 @@ router.post('/', authorize('ADMIN', 'MANAGER'), async (req, res, next) => {
     // Registrar en auditoría
     await prisma.auditLog.create({
       data: {
+        companyId: req.companyId,
         userId: req.user.id,
         action: 'CREATE',
         entity: 'Product',
@@ -115,7 +120,7 @@ router.get('/:id', async (req, res, next) => {
       }
     });
 
-    if (!product) return res.status(404).json({ error: 'Producto no encontrado' });
+    if (!product || product.companyId !== req.companyId) return res.status(404).json({ error: 'Producto no encontrado' });
 
     if (req.user.role === 'SELLER') {
       delete product.costUsd;
@@ -132,6 +137,9 @@ router.put('/:id', authorize('ADMIN', 'MANAGER'), async (req, res, next) => {
   try {
     const { name, sku, ean, costUsd, salePrice, minStock, subCategoryId, locationId, currentStock } = req.body;
     const productId = Number(req.params.id);
+
+    const existing = await prisma.product.findUnique({ where: { id: productId } });
+    if (!existing || existing.companyId !== req.companyId) return res.status(404).json({ error: 'Producto no encontrado' });
 
     const product = await prisma.product.update({
       where: { id: productId },
@@ -151,12 +159,13 @@ router.put('/:id', authorize('ADMIN', 'MANAGER'), async (req, res, next) => {
       await prisma.stockByLocation.upsert({
         where: { productId_locationId: { productId, locationId: Number(locationId) } },
         update: { quantity: Number(currentStock) },
-        create: { productId, locationId: Number(locationId), quantity: Number(currentStock), avgCostUsd: Number(costUsd) }
+        create: { productId, locationId: Number(locationId), quantity: Number(currentStock), avgCostUsd: Number(costUsd), companyId: req.companyId }
       });
     }
 
     await prisma.auditLog.create({
       data: {
+        companyId: req.companyId,
         userId: req.user.id,
         action: 'UPDATE',
         entity: 'Product',
@@ -175,6 +184,8 @@ router.put('/:id', authorize('ADMIN', 'MANAGER'), async (req, res, next) => {
 router.delete('/:id', authorize('ADMIN', 'MANAGER'), async (req, res, next) => {
   try {
     const productId = Number(req.params.id);
+    const existing = await prisma.product.findUnique({ where: { id: productId } });
+    if (!existing || existing.companyId !== req.companyId) return res.status(404).json({ error: 'Producto no encontrado' });
     
     // Soft delete: lo marcamos como inactivo para no romper el historial de ventas
     const product = await prisma.product.update({
@@ -184,6 +195,7 @@ router.delete('/:id', authorize('ADMIN', 'MANAGER'), async (req, res, next) => {
 
     await prisma.auditLog.create({
       data: {
+        companyId: req.companyId,
         userId: req.user.id,
         action: 'DELETE (SOFT)',
         entity: 'Product',
