@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, Save } from 'lucide-react';
+import { X, Save, Package } from 'lucide-react';
 import api from '../../services/api';
 
 const ProductForm = ({ product, onClose, onSave }) => {

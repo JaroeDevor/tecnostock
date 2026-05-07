@@ -408,7 +408,7 @@ const CategoryManagerModal = ({ onClose }) => {
           {loading ? <p>Cargando...</p> : categories.length === 0 ? <p>No hay categorías.</p> : (
             <div className="flex flex-col gap-2">
               {categories.map(cat => (
-                <div key={cat.id} className="flex justify-between items-center p-3 rounded-lg" style={{ backgroundColor: 'rgba(255,255,255,0.05)' }}>
+                <div key={cat.id} className="flex justify-between items-center" style={{ backgroundColor: 'rgba(255,255,255,0.05)', padding: '0.75rem', borderRadius: '12px' }}>
                   <div>
                     <div style={{ fontWeight: 600 }}>{cat.name}</div>
                     <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
