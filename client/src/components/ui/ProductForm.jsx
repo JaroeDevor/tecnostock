@@ -78,25 +78,35 @@ const ProductForm = ({ product, onClose, onSave }) => {
     try {
       // 1. Crear la categoría principal (o buscar si ya existe)
       let catId;
-      const existingCat = categories.find(c => c.name.toLowerCase() === quickCat.catName.toLowerCase());
+      let existingCat = categories.find(c => c.name.toLowerCase() === quickCat.catName.trim().toLowerCase());
       
       if (existingCat) {
         catId = existingCat.id;
       } else {
-        const { data } = await api.post('/categories', { name: quickCat.catName });
+        const { data } = await api.post('/categories', { name: quickCat.catName.trim() });
         catId = data.id;
+        existingCat = data; // Guardamos la referencia
       }
 
-      // 2. Crear la subcategoría
-      const { data: subData } = await api.post(`/categories/${catId}/subcategories`, { name: subName });
+      // 2. Crear o buscar la subcategoría
+      let finalSubId;
+      const existingSub = existingCat?.subCategories?.find(s => s.name.toLowerCase() === subName.toLowerCase());
+
+      if (existingSub) {
+        finalSubId = existingSub.id;
+      } else {
+        const { data: subData } = await api.post(`/categories/${catId}/subcategories`, { name: subName });
+        finalSubId = subData.id;
+      }
       
-      // 3. Refrescar lista y seleccionar la nueva subcategoría
+      // 3. Refrescar lista y seleccionar
       await fetchCategories();
-      setFormData(prev => ({ ...prev, subCategoryId: subData.id }));
+      setFormData(prev => ({ ...prev, subCategoryId: finalSubId }));
       setShowQuickCat(false);
       setQuickCat({ catName: '', subName: '' });
     } catch (err) {
-      alert("Error al crear la categoría rápida");
+      console.error(err);
+      alert("Error al procesar la categoría/subcategoría");
     } finally {
       setLoading(false);
     }

@@ -72,7 +72,8 @@ router.post('/', authorize('ADMIN', 'MANAGER'), async (req, res, next) => {
         costUsd: Number(costUsd),
         salePrice: Number(salePrice),
         minStock: Number(minStock),
-        subCategoryId: Number(subCategoryId)
+        subCategoryId: Number(subCategoryId),
+        companyId: req.companyId
       }
     });
 
