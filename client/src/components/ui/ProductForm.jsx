@@ -70,6 +70,16 @@ const ProductForm = ({ product, onClose, onSave }) => {
     }
   };
 
+  const handleDeleteCategory = async (id, name) => {
+    if (!window.confirm(`¿Eliminar la categoría "${name}"? No se puede borrar si tiene productos asociados.`)) return;
+    try {
+      await api.delete(`/categories/${id}`);
+      await fetchCategories();
+    } catch (err) {
+      alert(err.response?.data?.error || "Error al eliminar. Asegurate de que no tenga productos.");
+    }
+  };
+
   const handleQuickCatSave = async () => {
     if (!quickCat.catName.trim()) return alert("El nombre de la categoría es obligatorio");
     const subName = quickCat.subName.trim() || "General";
@@ -234,7 +244,7 @@ const ProductForm = ({ product, onClose, onSave }) => {
               </div>
             </div>
 
-            {/* Formulario Rápido de Categoría */}
+            {/* Panel de Categorías */}
             {showQuickCat && (
               <div style={{ 
                 backgroundColor: 'rgba(0,0,0,0.2)', 
@@ -243,8 +253,9 @@ const ProductForm = ({ product, onClose, onSave }) => {
                 border: '1px solid var(--brand-primary)',
                 marginTop: '0.5rem'
               }}>
+                {/* Crear nueva */}
                 <h4 style={{ fontSize: '0.9rem', marginBottom: '0.5rem', color: 'var(--brand-primary)' }}>Nueva Categoría / Subcategoría</h4>
-                <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>Escribe un nombre nuevo o selecciona una categoría existente para añadirle una subcategoría.</p>
+                <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>Escribe un nombre nuevo o selecciona una existente para añadirle una subcategoría.</p>
                 <div className="flex flex-col gap-3">
                   <input 
                     type="text" 
@@ -269,6 +280,33 @@ const ProductForm = ({ product, onClose, onSave }) => {
                     <button type="button" className="btn btn-primary" style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem' }} onClick={handleQuickCatSave}>Crear y Seleccionar</button>
                   </div>
                 </div>
+
+                {/* Lista de categorías existentes */}
+                {categories.length > 0 && (
+                  <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid var(--border-color)' }}>
+                    <h4 style={{ fontSize: '0.8rem', marginBottom: '0.75rem', color: 'var(--text-secondary)' }}>Categorías existentes</h4>
+                    <div style={{ maxHeight: '180px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                      {categories.map(cat => (
+                        <div key={cat.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.5rem 0.75rem', backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: '8px' }}>
+                          <div>
+                            <span style={{ fontSize: '0.85rem', fontWeight: 500 }}>{cat.name}</span>
+                            <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginLeft: '0.5rem' }}>
+                              ({cat.subCategories?.map(s => s.name).join(', ') || 'Sin sub'})
+                            </span>
+                          </div>
+                          <button 
+                            type="button"
+                            onClick={() => handleDeleteCategory(cat.id, cat.name)}
+                            style={{ background: 'transparent', border: 'none', color: 'var(--danger)', cursor: 'pointer', padding: '0.25rem', borderRadius: '4px', display: 'flex', alignItems: 'center' }}
+                            title="Eliminar categoría"
+                          >
+                            <X size={14} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
