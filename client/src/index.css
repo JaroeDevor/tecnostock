@@ -206,6 +206,17 @@ label {
 .gap-4 { gap: 1rem; }
 .gap-6 { gap: 1.5rem; }
 
+/* Spacing Utilities */
+.mb-2 { margin-bottom: 0.5rem; }
+.mb-4 { margin-bottom: 1rem; }
+.mb-6 { margin-bottom: 1.5rem; }
+.mb-8 { margin-bottom: 2rem; }
+.mt-2 { margin-top: 0.5rem; }
+.mt-3 { margin-top: 0.75rem; }
+.mt-4 { margin-top: 1rem; }
+.mt-6 { margin-top: 1.5rem; }
+.mt-8 { margin-top: 2rem; }
+
 /* Dashboard Layout */
 .app-container {
   display: flex;
