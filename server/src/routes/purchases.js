@@ -3,6 +3,7 @@ const prisma = require('../lib/prisma');
 const auth = require('../middleware/auth');
 const tenant = require('../middleware/tenant');
 const authorize = require('../middleware/roles');
+const { validateOwnership } = require('../utils/validateOwnership');
 
 const router = express.Router();
 
@@ -34,6 +35,12 @@ router.post('/', async (req, res, next) => {
   try {
     const { supplierId, items, notes } = req.body;
     // items: [{ productId, qtyOrdered, unitCostUsd }]
+
+    // Validar pertenencia al tenant
+    await validateOwnership('supplier', supplierId, req.companyId, 'Proveedor');
+    for (const item of items) {
+      await validateOwnership('product', item.productId, req.companyId, 'Producto');
+    }
     
     let totalUsd = 0;
     items.forEach(i => totalUsd += (i.qtyOrdered * i.unitCostUsd));
@@ -68,6 +75,9 @@ router.post('/:id/receive', async (req, res, next) => {
   try {
     const orderId = Number(req.params.id);
     const { locationId, receivedBy, arrivalDate, notes, items } = req.body; 
+
+    // Validar pertenencia de la ubicación al tenant
+    await validateOwnership('location', locationId, req.companyId, 'Ubicación');
 
     if (!items || !Array.isArray(items) || items.length === 0) {
       return res.status(400).json({ error: 'Debe especificar los ítems y cantidades a recibir' });

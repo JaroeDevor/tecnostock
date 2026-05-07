@@ -16,10 +16,12 @@ const errorHandler = (err, req, res, next) => {
     });
   }
 
-  // Errores generales
+  // En producción, nunca exponer detalles internos al cliente
+  const isProduction = process.env.NODE_ENV === 'production';
   const statusCode = res.statusCode !== 200 ? res.statusCode : 500;
+
   res.status(statusCode).json({
-    error: err.message || 'Error interno del servidor'
+    error: isProduction ? 'Error interno del servidor' : (err.message || 'Error interno del servidor')
   });
 };
 

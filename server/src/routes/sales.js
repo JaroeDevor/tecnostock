@@ -2,6 +2,7 @@ const express = require('express');
 const prisma = require('../lib/prisma');
 const auth = require('../middleware/auth');
 const tenant = require('../middleware/tenant');
+const { validateOwnership } = require('../utils/validateOwnership');
 
 const router = express.Router();
 
@@ -12,6 +13,13 @@ router.use(tenant);
 router.post('/', async (req, res, next) => {
   try {
     const { customerId, locationId, items, paymentMethod, source, integrationId, externalOrderId, notes } = req.body;
+    
+    // Validar pertenencia de entidades al tenant
+    await validateOwnership('location', locationId, req.companyId, 'Ubicación');
+    if (customerId) await validateOwnership('customer', customerId, req.companyId, 'Cliente');
+    for (const item of items) {
+      await validateOwnership('product', item.productId, req.companyId, 'Producto');
+    }
     
     // items es un array: [{ productId, quantity, unitPrice }]
 

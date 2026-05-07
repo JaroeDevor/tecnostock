@@ -3,6 +3,7 @@ const prisma = require('../lib/prisma');
 const auth = require('../middleware/auth');
 const tenant = require('../middleware/tenant');
 const authorize = require('../middleware/roles');
+const { validateOwnership } = require('../utils/validateOwnership');
 
 const router = express.Router();
 
@@ -13,6 +14,11 @@ router.use(tenant);
 router.post('/', authorize('ADMIN', 'MANAGER'), async (req, res, next) => {
   try {
     const { productId, fromLocationId, toLocationId, quantity, notes } = req.body;
+
+    // Validar pertenencia al tenant
+    await validateOwnership('product', productId, req.companyId, 'Producto');
+    await validateOwnership('location', fromLocationId, req.companyId, 'Ubicación origen');
+    await validateOwnership('location', toLocationId, req.companyId, 'Ubicación destino');
 
     if (fromLocationId === toLocationId) {
       return res.status(400).json({ error: 'El origen y destino no pueden ser iguales' });
