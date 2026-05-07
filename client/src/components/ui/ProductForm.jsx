@@ -243,14 +243,21 @@ const ProductForm = ({ product, onClose, onSave }) => {
                 border: '1px solid var(--brand-primary)',
                 marginTop: '0.5rem'
               }}>
-                <h4 style={{ fontSize: '0.9rem', marginBottom: '1rem', color: 'var(--brand-primary)' }}>Nueva Categoría / Subcategoría</h4>
+                <h4 style={{ fontSize: '0.9rem', marginBottom: '0.5rem', color: 'var(--brand-primary)' }}>Nueva Categoría / Subcategoría</h4>
+                <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>Escribe un nombre nuevo o selecciona una categoría existente para añadirle una subcategoría.</p>
                 <div className="flex flex-col gap-3">
                   <input 
                     type="text" 
+                    list="existingCategories"
                     placeholder="Nombre de la Categoría (ej: Audio)" 
                     value={quickCat.catName}
                     onChange={(e) => setQuickCat({...quickCat, catName: e.target.value})}
                   />
+                  <datalist id="existingCategories">
+                    {categories.map(cat => (
+                      <option key={cat.id} value={cat.name} />
+                    ))}
+                  </datalist>
                   <input 
                     type="text" 
                     placeholder="Subcategoría (Opcional, ej: Auriculares)" 
