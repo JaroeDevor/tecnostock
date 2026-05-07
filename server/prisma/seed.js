@@ -19,7 +19,7 @@ async function main() {
   console.log(`✅ Compañía creada: ${company.name}`);
 
   // 1. Usuarios (Admin, Manager, Seller)
-  const seedPassword = process.env.SEED_ADMIN_PASSWORD || Math.random().toString(36).slice(-8);
+  const seedPassword = process.env.SEED_ADMIN_PASSWORD || '123456';
   console.log(`\n⚠️ ATENCIÓN: Contraseña para usuarios iniciales: ${seedPassword}`);
   console.log('CAMBIAR INMEDIATAMENTE en producción.\n');
   const passwordHash = await bcrypt.hash(seedPassword, 10);

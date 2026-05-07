@@ -5,8 +5,8 @@ import axios from 'axios';
 import { Package, Lock, Mail, ArrowRight } from 'lucide-react';
 
 const Login = () => {
-  const [email, setEmail] = useState('admin@tecnomovil.com');
-  const [password, setPassword] = useState('123456');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   
@@ -97,12 +97,9 @@ const Login = () => {
             )}
           </button>
         </form>
-        
-        <div style={{ marginTop: '2rem', textAlign: 'center', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-          Credenciales de prueba: admin@tecnomovil.com / 123456
-        </div>
       </div>
     </div>
+
   );
 };
 
