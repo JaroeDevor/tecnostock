@@ -71,6 +71,8 @@ const Products = () => {
   const formatCurrency = (val) => new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(val);
   const formatUSD = (val) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(val);
 
+  const [isCategoryManagerOpen, setIsCategoryManagerOpen] = useState(false);
+
   return (
     <div className="flex flex-col h-full relative">
       <div className="flex justify-between items-center mb-6">
@@ -80,6 +82,9 @@ const Products = () => {
         
         {['ADMIN', 'MANAGER'].includes(user?.role) && (
           <div className="flex gap-3">
+            <button className="btn btn-secondary" onClick={() => setIsCategoryManagerOpen(true)} style={{ gap: '0.5rem' }}>
+              <Package size={18} /> Gestionar Categorías
+            </button>
             <button className="btn btn-secondary" onClick={() => setIsTransferOpen(true)} style={{ gap: '0.5rem' }}>
               <ArrowLeftRight size={18} /> Transferir Stock
             </button>
@@ -91,6 +96,7 @@ const Products = () => {
       </div>
 
       <div className="glass-panel" style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+
         {/* Barra de Herramientas */}
         <div style={{ padding: '1.5rem', borderBottom: '1px solid var(--border-color)', display: 'flex', gap: '1rem' }}>
           <div style={{ position: 'relative', flex: 1, maxWidth: '400px' }}>
@@ -224,6 +230,12 @@ const Products = () => {
           onSuccess={() => { setIsTransferOpen(false); fetchProducts(); }}
         />
       )}
+
+      {isCategoryManagerOpen && (
+        <CategoryManagerModal 
+          onClose={() => { setIsCategoryManagerOpen(false); fetchProducts(); }} 
+        />
+      )}
     </div>
   );
 };
@@ -350,6 +362,72 @@ const TransferModal = ({ products, locations, onClose, onSuccess }) => {
           to { transform: scale(1); opacity: 1; }
         }
       `}</style>
+    </div>
+  );
+};
+
+const CategoryManagerModal = ({ onClose }) => {
+  const [categories, setCategories] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchCategories();
+  }, []);
+
+  const fetchCategories = async () => {
+    try {
+      const { data } = await api.get('/categories');
+      setCategories(data);
+    } catch (e) { console.error(e); }
+    finally { setLoading(false); }
+  };
+
+  const handleDeleteCategory = async (id, name) => {
+    if (!window.confirm(`¿Seguro que querés eliminar la categoría "${name}"? Se borrarán también sus subcategorías. No podés borrar categorías que tengan productos.`)) return;
+    try {
+      await api.delete(`/categories/${id}`);
+      fetchCategories();
+    } catch (err) {
+      alert(err.response?.data?.error || "Error al eliminar la categoría. Asegurate de que no tenga productos asociados.");
+    }
+  };
+
+  return (
+    <div style={{
+      position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+      backgroundColor: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(8px)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1100, padding: '1rem'
+    }}>
+      <div className="glass-panel" style={{ width: '100%', maxWidth: '500px', padding: '2rem' }}>
+        <div className="flex justify-between items-center mb-6">
+          <h2 style={{ margin: 0 }}>Gestionar Categorías</h2>
+          <button className="btn btn-secondary" onClick={onClose}>Cerrar</button>
+        </div>
+
+        <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
+          {loading ? <p>Cargando...</p> : categories.length === 0 ? <p>No hay categorías.</p> : (
+            <div className="flex flex-col gap-2">
+              {categories.map(cat => (
+                <div key={cat.id} className="flex justify-between items-center p-3 rounded-lg" style={{ backgroundColor: 'rgba(255,255,255,0.05)' }}>
+                  <div>
+                    <div style={{ fontWeight: 600 }}>{cat.name}</div>
+                    <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                      {cat.subCategories?.length || 0} subcategorías
+                    </div>
+                  </div>
+                  <button 
+                    className="btn btn-secondary" 
+                    style={{ padding: '0.5rem', color: 'var(--danger)' }}
+                    onClick={() => handleDeleteCategory(cat.id, cat.name)}
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 };

@@ -55,4 +55,26 @@ router.post('/:id/subcategories', authorize('ADMIN', 'MANAGER'), async (req, res
   }
 });
 
+// Eliminar categoría (Solo Admin y Manager)
+router.delete('/:id', authorize('ADMIN', 'MANAGER'), async (req, res, next) => {
+  try {
+    const id = Number(req.params.id);
+    const category = await prisma.category.findUnique({
+      where: { id },
+      include: { subCategories: { include: { _count: { select: { products: true } } } } }
+    });
+
+    if (!category || category.companyId !== req.companyId) return res.status(404).json({ error: 'Categoría no encontrada' });
+
+    // Verificar si tiene productos asociados
+    const hasProducts = category.subCategories.some(sub => sub._count.products > 0);
+    if (hasProducts) return res.status(400).json({ error: 'No se puede eliminar una categoría que contiene productos' });
+
+    await prisma.category.delete({ where: { id } });
+    res.json({ message: 'Categoría eliminada correctamente' });
+  } catch (error) {
+    next(error);
+  }
+});
+
 module.exports = router;

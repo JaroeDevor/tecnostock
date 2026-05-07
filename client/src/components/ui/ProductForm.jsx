@@ -272,17 +272,19 @@ const ProductForm = ({ product, onClose, onSave }) => {
               </div>
             )}
 
-            <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid var(--border-color)' }}>
-              <h3 style={{ fontSize: '1rem', marginBottom: '1rem', color: 'var(--text-secondary)' }}>Depósito / Almacén Inicial</h3>
+            <div style={{ marginTop: '1.5rem', padding: '1.25rem', borderRadius: '12px', border: '1px solid var(--border-color)', backgroundColor: 'var(--brand-primary-light)' }}>
+              <h3 style={{ fontSize: '1rem', marginBottom: '0.75rem', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Package size={18} /> Depósito de Inventario *
+              </h3>
               <div>
-                <select name="locationId" value={formData.locationId} onChange={handleChange}>
+                <select required name="locationId" value={formData.locationId} onChange={handleChange} style={{ borderColor: !formData.locationId ? 'var(--warning)' : 'var(--border-color)' }}>
                   <option value="">Seleccionar Depósito...</option>
                   {locations.map(loc => (
                     <option key={loc.id} value={loc.id}>{loc.name} ({loc.type === 'WAREHOUSE' ? 'Almacén' : 'Tienda'})</option>
                   ))}
                 </select>
-                <small style={{ color: 'var(--text-muted)', display: 'block', marginTop: '0.5rem' }}>
-                  El stock inicial se cargará en este depósito. Luego podrás transferir mercadería entre tiendas.
+                <small style={{ color: 'var(--text-secondary)', display: 'block', marginTop: '0.5rem', fontSize: '0.75rem' }}>
+                  Es obligatorio seleccionar un depósito para {isEditing ? 'actualizar' : 'cargar'} el stock físico del producto.
                 </small>
               </div>
             </div>
