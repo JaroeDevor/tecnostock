@@ -71,7 +71,9 @@ const ProductForm = ({ product, onClose, onSave }) => {
   };
 
   const handleQuickCatSave = async () => {
-    if (!quickCat.catName || !quickCat.subName) return alert("Complete ambos campos");
+    if (!quickCat.catName.trim()) return alert("El nombre de la categoría es obligatorio");
+    const subName = quickCat.subName.trim() || "General";
+    
     setLoading(true);
     try {
       // 1. Crear la categoría principal (o buscar si ya existe)
@@ -86,7 +88,7 @@ const ProductForm = ({ product, onClose, onSave }) => {
       }
 
       // 2. Crear la subcategoría
-      const { data: subData } = await api.post(`/categories/${catId}/subcategories`, { name: quickCat.subName });
+      const { data: subData } = await api.post(`/categories/${catId}/subcategories`, { name: subName });
       
       // 3. Refrescar lista y seleccionar la nueva subcategoría
       await fetchCategories();
@@ -241,7 +243,7 @@ const ProductForm = ({ product, onClose, onSave }) => {
                   />
                   <input 
                     type="text" 
-                    placeholder="Nombre de la Subcategoría (ej: Auriculares)" 
+                    placeholder="Subcategoría (Opcional, ej: Auriculares)" 
                     value={quickCat.subName}
                     onChange={(e) => setQuickCat({...quickCat, subName: e.target.value})}
                   />
