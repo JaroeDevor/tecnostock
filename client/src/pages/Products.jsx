@@ -76,7 +76,6 @@ const Products = () => {
       <div className="flex justify-between items-center mb-6">
         <div>
           <h1 style={{ margin: 0 }}>Inventario de Productos</h1>
-          <p style={{ margin: 0 }}>Gestiona el catálogo principal (2,500 SKUs)</p>
         </div>
         
         {['ADMIN', 'MANAGER'].includes(user?.role) && (

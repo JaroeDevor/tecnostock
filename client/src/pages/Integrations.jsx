@@ -110,9 +110,6 @@ const Integrations = () => {
     <div className="flex flex-col h-full relative">
       <div className="mb-8">
         <h1 style={{ margin: 0, fontSize: '2rem', fontWeight: 700, letterSpacing: '-0.5px' }}>Integraciones y Omnicanalidad</h1>
-        <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: '1.05rem', marginTop: '0.25rem' }}>
-          Conecta TecnoStock con tus canales de venta online para mantener el inventario sincronizado automáticamente.
-        </p>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>

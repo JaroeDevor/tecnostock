@@ -41,7 +41,6 @@ const DashboardHome = () => {
     <div className="flex flex-col gap-6">
       <div>
         <h1 style={{ fontSize: '2rem', margin: 0, fontWeight: 700, letterSpacing: '-0.5px' }}>Vista General</h1>
-        <p style={{ color: 'var(--text-secondary)', margin: '0.25rem 0 0 0' }}>Métricas en tiempo real de TecnoStock</p>
       </div>
 
       {/* Tarjetas de Métricas Principales */}

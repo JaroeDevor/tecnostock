@@ -61,7 +61,6 @@ const Reports = () => {
         <h1 style={{ margin: 0, fontSize: '2rem', fontWeight: 700, letterSpacing: '-0.5px', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
           <BarChart3 size={28} color="var(--brand-primary)" /> Reportes de Ventas
         </h1>
-        <p style={{ margin: '0.25rem 0 0 0', color: 'var(--text-muted)' }}>Análisis de ventas por producto y ubicación</p>
       </div>
 
       {/* Filtros */}

@@ -87,7 +87,6 @@ const Purchases = () => {
       <div className="flex justify-between items-center mb-8">
         <div>
           <h1 style={{ margin: 0, fontSize: '2rem', fontWeight: 700, letterSpacing: '-0.5px' }}>Órdenes de Compra</h1>
-          <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '1.05rem', marginTop: '0.25rem' }}>Logística de entrada y abastecimiento de inventario</p>
         </div>
         <button className="btn btn-primary" onClick={() => { setOrderToEdit(null); setIsFormOpen(true); }} style={{ padding: '0.8rem 1.5rem', boxShadow: 'var(--shadow-glow)' }}>
           <Plus size={20} /> Nueva Orden de Compra

@@ -50,7 +50,6 @@ const Suppliers = () => {
       <div className="flex justify-between items-center mb-6">
         <div>
           <h1 style={{ margin: 0 }}>Proveedores</h1>
-          <p style={{ margin: 0 }}>Gestión de fabricantes y distribuidores</p>
         </div>
         <button className="btn btn-primary" onClick={() => handleOpenForm()}>
           <Plus size={18} /> Nuevo Proveedor

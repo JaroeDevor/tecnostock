@@ -48,7 +48,6 @@ const Customers = () => {
       <div className="flex justify-between items-center mb-6">
         <div>
           <h1 style={{ margin: 0 }}>Clientes</h1>
-          <p style={{ margin: 0 }}>Directorio de clientes frecuentes</p>
         </div>
         <button className="btn btn-primary" onClick={() => handleOpenForm()}>
           <Plus size={18} /> Nuevo Cliente
